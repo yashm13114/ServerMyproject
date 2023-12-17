@@ -26,7 +26,7 @@ const JWT_SECRET =
     "f1a5a554258b5c4222cd8ebc5dea8b4912a8d8795c0422bb7ba22eb16abd7308";
 mongoose
 // .connect("mongodb+srv://yash:jOhfBi3986fmdSAM@cluster0.uqlowxi.mongodb.net/ExpenseTracker")
-    .connect("mongodb://0.0.0.0:27017/DialyExpense")
+    .connect("mongodb+srv://yashm13114:sh5VlCTZNnkShVVP@cluster0.lgqyj4p.mongodb.net/DailyExpenseTracker")
     .then(() => {
         console.log("Connected to mongo");
     })

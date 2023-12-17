@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const path = require("path");
 const cookieParser = require("cookie-parser");
 dotenv.config({ path: "./Config.env" });
 const app = express();
@@ -33,7 +34,11 @@ app.use(
         origin: "http://localhost:5173",
     })
 );
-
+app.use(cors());
+app.use(express.static(path.join(__dirname, './Frontend/dist')))
+app.get("*", function(req, res) {
+    res.sendFile(path.join(__dirname, "./Frontend/dist/index.html"));
+});
 mongoose
 // .connect("mongodb+srv://yash:jOhfBi3986fmdSAM@cluster0.uqlowxi.mongodb.net/ExpenseTracker")
     .connect("mongodb://0.0.0.0:27017/DialyExpense")

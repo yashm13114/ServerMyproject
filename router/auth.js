@@ -3,10 +3,17 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const UserSchema = require("../model/UserSchema");
 const bcrypt = require("bcrypt");
+const cors = require("cors");
 const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const { addTransaction, getAllTransaction } = require('../controller/TransactionCtrl')
+const {
+    addTransaction,
+    getAllTransaction,
+    deleteTransaction,
+    editTransaction,
+    updateTransaction,
+} = require("../controller/TransactionCtrl");
 const authenticate = require("../middleware/authenticate");
 const {
     addExpense,
@@ -26,6 +33,7 @@ mongoose
     .catch((err) => {
         console.log("error" + err);
     });
+router.use(cors());
 const User = require("../model/UserSchema");
 router.use(cookieParser());
 router.get("/", (req, res) => {
@@ -88,10 +96,6 @@ router.post("/login", async(req, res) => {
     }
 });
 // auth.js
-router.get("/profile", authenticate, (req, res) => {
-    const { username, email } = req.rootuser;
-    res.json({ username, email });
-});
 
 router.get("/logout", (req, res) => {
     res.clearCookie("jwt", { path: "/" });
@@ -169,33 +173,37 @@ router.post("/reset-password/:id/:token", async(req, res) => {
     const { password, cpassword } = req.body;
 
     const oldUser = await User.findOne({ _id: id });
+
     if (!oldUser) {
         return res.json({ status: "User not exists" });
     }
-    const secret = JWT_SECRET + oldUser.password;
-    const secret2 = JWT_SECRET + oldUser.cpassword;
+
     try {
-        const verify = jwt.verify(token, secret, { algorithm: "HS256" });
+        // Use a single secret for JWT verification
+        const secret = JWT_SECRET;
 
-        const verify2 = jwt.verify(token, secret2, { algorithm: "HS256" });
+        // Verify the token
+        const decoded = jwt.verify(token, secret, { algorithm: "HS256" });
 
-        const encryptedpass = await bcrypt.hash(password, 12);
-        const encryptedpass2 = await bcrypt.hash(cpassword, 12);
-        await User.updateOne({
-            _id: id,
-        }, {
+        // Hash the new passwords
+        const encryptedPass = await bcrypt.hash(password, 12);
+        const encryptedCPass = await bcrypt.hash(cpassword, 12);
+
+        // Update the user's passwords in the database
+        await User.updateOne({ _id: id }, {
             $set: {
-                password: encryptedpass,
-                cpassword: encryptedpass2,
+                password: encryptedPass,
+                cpassword: encryptedCPass,
             },
         });
 
         return res.json({ status: "updated" });
     } catch (err) {
-        console.log(err);
-        return res.json({ status: "Something Went Wrong" });
+        console.error(err);
+        return res.json({ status: "Invalid or expired token" });
     }
 });
+
 
 router
     .post("/add-expense", addExpense)
@@ -205,8 +213,38 @@ router
 router.get("/getTransactions", getTransactions);
 
 // get and post routes
-router.post("/add-transaction", addTransaction)
+router.post("/add-transaction", addTransaction);
 
-router.get("/get-transaction", getAllTransaction)
+router.get("/get-transaction", getAllTransaction);
+router.delete("/delete-expense/:id", deleteExpense);
+router.delete("/delete-transaction/:id", deleteTransaction);
+router.patch("/edit-transaction", editTransaction);
+router.put("/update-transaction/:id", updateTransaction);
+
+// get user
+
+router.get("/profile/:id", async(req, res) => {
+    try {
+        const userId = req.params.id; // Use req.params to get the user ID from the URL
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        const user = await UserSchema.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({
+            username: user.name,
+            email: user.email,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
 
 module.exports = router;
